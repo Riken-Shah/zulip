@@ -134,6 +134,12 @@ run_test("start", () => {
         return opts;
     };
 
+    const stream1 = {
+        stream_id: 101,
+        name: "stream1",
+        subscribed: true,
+    };
+    stream_data.add_sub(stream1);
     let opts = {};
     start("stream", opts);
 
@@ -145,6 +151,7 @@ run_test("start", () => {
     assert.equal(compose_state.get_message_type(), "stream");
     assert(compose_state.composing());
 
+    stream_data.delete_sub(stream1.stream_id);
     // Autofill stream field for single subscription
     const denmark = {
         subscribed: true,
@@ -255,6 +262,12 @@ run_test("respond_to_message", () => {
     assert.equal(compose_state.private_message_recipient(), "alice@example.com");
 
     // Test stream
+    const devel = {
+        stream_id: 102,
+        name: "devel",
+        subscribed: true,
+    };
+    stream_data.add_sub(devel);
     msg = {
         type: "stream",
         stream: "devel",
