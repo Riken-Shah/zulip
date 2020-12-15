@@ -152,7 +152,7 @@ function create_stream() {
         );
         return undefined;
     }
-    data.subscriptions = JSON.stringify([{name: stream_name, description}]);
+    data.subscriptions = JSON.stringify([{stream: stream_name, description}]);
 
     let invite_only;
     let history_public_to_subscribers;

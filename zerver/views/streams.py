@@ -305,7 +305,7 @@ FuncKwargPair = Tuple[Callable[..., HttpResponse], Dict[str, Union[int, Iterable
 add_subscriptions_schema = check_list(
     check_dict_only(
         required_keys=[
-            ('name', check_string)
+            ('stream', check_string_or_int)
         ],
         optional_keys=[
             ('color', check_color),
@@ -314,12 +314,12 @@ add_subscriptions_schema = check_list(
     ),
 )
 
-remove_subscriptions_schema = check_list(check_string)
+remove_subscriptions_schema = check_list(check_string_or_int)
 
 @has_request_variables
 def update_subscriptions_backend(
         request: HttpRequest, user_profile: UserProfile,
-        delete: Iterable[str]=REQ(validator=remove_subscriptions_schema, default=[]),
+        delete: Iterable[Union[str, int]]=REQ(validator=remove_subscriptions_schema, default=[]),
         add: Iterable[Mapping[str, Any]]=REQ(validator=add_subscriptions_schema, default=[]),
 ) -> HttpResponse:
     if not add and not delete:
@@ -362,15 +362,17 @@ check_principals: Validator[Union[List[str], List[int]]] = check_union(
 @has_request_variables
 def remove_subscriptions_backend(
         request: HttpRequest, user_profile: UserProfile,
-        streams_raw: Iterable[str]=REQ("subscriptions", validator=remove_subscriptions_schema),
+        streams_raw: Iterable[Union[str, int]]=REQ("subscriptions", validator=remove_subscriptions_schema),
         principals: Optional[Union[List[str], List[int]]]=REQ(validator=check_principals, default=None),
 ) -> HttpResponse:
 
     removing_someone_else = check_if_removing_someone_else(user_profile, principals)
 
     streams_as_dict: List[StreamDict] = []
-    for stream_name in streams_raw:
-        streams_as_dict.append({"name": stream_name.strip()})
+    for stream_identifier in streams_raw:
+        if isinstance(stream_identifier, str):
+            stream_identifier = stream_identifier.strip()
+        streams_as_dict.append({"stream": stream_identifier})
 
     streams, __ = list_to_streams(streams_as_dict, user_profile,
                                   admin_access_required=removing_someone_else)
@@ -421,7 +423,7 @@ EMPTY_PRINCIPALS: Union[Sequence[str], Sequence[int]] = []
 def add_subscriptions_backend(
         request: HttpRequest,
         user_profile: UserProfile,
-        streams_raw: Iterable[Dict[str, str]]=REQ("subscriptions", validator=add_subscriptions_schema),
+        streams_raw: Iterable[Dict[str, Union[str, int]]]=REQ("subscriptions", validator=add_subscriptions_schema),
         invite_only: bool=REQ(validator=check_bool, default=False),
         stream_post_policy: int=REQ(validator=check_int_in(
             Stream.STREAM_POST_POLICY_TYPES), default=Stream.STREAM_POST_POLICY_EVERYONE),
@@ -436,19 +438,21 @@ def add_subscriptions_backend(
 ) -> HttpResponse:
     realm = user_profile.realm
     stream_dicts = []
-    color_map = {}
+    color_map: Dict[Union[int, str], str] = {}
     for stream_dict in streams_raw:
         # 'color' field is optional
         # check for its presence in the streams_raw first
         if 'color' in stream_dict:
-            color_map[stream_dict['name']] = stream_dict['color']
+            color_map[stream_dict['stream']] = str(stream_dict['color'])
 
         stream_dict_copy: StreamDict = {}
-        stream_dict_copy["name"] = stream_dict["name"].strip()
+        if isinstance(stream_dict["stream"], str):
+            stream_dict["stream"] = stream_dict["stream"].strip()
+        stream_dict_copy["stream"] = stream_dict["stream"]
 
         # We don't allow newline characters in stream descriptions.
         if "description" in stream_dict:
-            stream_dict_copy["description"] = stream_dict["description"].replace("\n", " ")
+            stream_dict_copy["description"] = str(stream_dict["description"]).replace("\n", " ")
 
         stream_dict_copy["invite_only"] = invite_only
         stream_dict_copy["stream_post_policy"] = stream_post_policy

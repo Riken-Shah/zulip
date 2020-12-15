@@ -894,12 +894,12 @@ Output:
         bulk_remove_subscriptions([user_profile], [stream], client)
 
     # Subscribe to a stream by making an API request
-    def common_subscribe_to_streams(self, user: UserProfile, streams: Iterable[str],
+    def common_subscribe_to_streams(self, user: UserProfile, streams: Iterable[Union[str, int]],
                                     extra_post_data: Dict[str, Any]={}, invite_only: bool=False,
                                     is_web_public: bool=False,
                                     allow_fail: bool=False,
                                     **kwargs: Any) -> HttpResponse:
-        post_data = {'subscriptions': orjson.dumps([{"name": stream} for stream in streams]).decode(),
+        post_data = {'subscriptions': orjson.dumps([{"stream": stream} for stream in streams]).decode(),
                      'is_web_public': orjson.dumps(is_web_public).decode(),
                      'invite_only': orjson.dumps(invite_only).decode()}
         post_data.update(extra_post_data)

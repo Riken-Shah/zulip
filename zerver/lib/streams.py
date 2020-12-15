@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from django.conf import settings
 from django.db.models.query import QuerySet
@@ -18,6 +18,7 @@ from zerver.models import (
     Subscription,
     UserProfile,
     active_non_guest_user_ids,
+    bulk_get_streams_by_ids,
     bulk_get_streams_by_names,
     get_realm_stream,
     get_stream,
@@ -41,7 +42,7 @@ class StreamDict(TypedDict, total=False):
     Note that these fields are just a subset of
     the fields in the Stream model.
     """
-    name: str
+    stream: Union[int, str]
     description: str
     invite_only: bool
     is_web_public: bool
@@ -131,26 +132,34 @@ def create_streams_if_needed(
     stream_dicts: List[StreamDict],
     acting_user: Optional[UserProfile]=None
 ) -> Tuple[List[Stream], List[Stream]]:
-    """Note that stream_dict["name"] is assumed to already be stripped of
+    """Note that stream_dict["stream"] is name and assumed to already be stripped of
     whitespace"""
     added_streams: List[Stream] = []
     existing_streams: List[Stream] = []
     for stream_dict in stream_dicts:
-        stream, created = create_stream_if_needed(
-            realm,
-            stream_dict["name"],
-            invite_only=stream_dict.get("invite_only", False),
-            stream_post_policy=stream_dict.get("stream_post_policy", Stream.STREAM_POST_POLICY_EVERYONE),
-            history_public_to_subscribers=stream_dict.get("history_public_to_subscribers"),
-            stream_description=stream_dict.get("description", ""),
-            message_retention_days=stream_dict.get("message_retention_days", None),
-            acting_user=acting_user
-        )
+        # Rechecking that stream_dict["stream"] is `name` (string) to avoid passing `id` (int) to it.
+        if isinstance(stream_dict["stream"], str):
+            stream, created = create_stream_if_needed(
+                realm,
+                str(stream_dict["stream"]),
+                invite_only=stream_dict.get("invite_only", False),
+                stream_post_policy=stream_dict.get("stream_post_policy", Stream.STREAM_POST_POLICY_EVERYONE),
+                history_public_to_subscribers=stream_dict.get("history_public_to_subscribers"),
+                stream_description=stream_dict.get("description", ""),
+                message_retention_days=stream_dict.get("message_retention_days", None),
+                acting_user=acting_user
+            )
 
-        if created:
-            added_streams.append(stream)
+            if created:
+                added_streams.append(stream)
+            else:
+                existing_streams.append(stream)
         else:
-            existing_streams.append(stream)
+            # Raising error if unknown stream id is passed.
+            try:
+                stream = get_stream_by_id_in_realm(stream_dict["stream"], realm)
+            except Stream.DoesNotExist:
+                raise JsonableError(_("No stream with id '{}' found.").format(stream_dict["stream"]))
 
     return added_streams, existing_streams
 
@@ -511,17 +520,28 @@ def list_to_streams(streams_raw: Iterable[StreamDict],
     """
     # Validate all streams, getting extant ones, then get-or-creating the rest.
 
-    stream_set = {stream_dict["name"] for stream_dict in streams_raw}
+    stream_set = {stream_dict["stream"] for stream_dict in streams_raw}
+    is_stream_type_name = isinstance(next(iter(stream_set), None), str)
 
-    for stream_name in stream_set:
-        # Stream names should already have been stripped by the
-        # caller, but it makes sense to verify anyway.
-        assert stream_name == stream_name.strip()
-        check_stream_name(stream_name)
+    if is_stream_type_name:
+        for stream_name in stream_set:
+            # Stream names should already have been stripped by the
+            # caller, but it makes sense to verify anyway.
+            assert isinstance(stream_name, str) and stream_name == stream_name.strip()
+            check_stream_name(stream_name)
+
+    else:
+        for stream_id in stream_set:
+            # Stream id should already be parsed in int by the caller,
+            # but it makes sense to verify anyway.
+            assert isinstance(stream_id, int)
 
     existing_streams: List[Stream] = []
     missing_stream_dicts: List[StreamDict] = []
-    existing_stream_map = bulk_get_streams_by_names(user_profile.realm, stream_set)
+    existing_stream_map = bulk_get_streams_by_names(user_profile.realm, cast(Set[str], stream_set)) if is_stream_type_name else bulk_get_streams_by_ids(user_profile.realm, cast(Set[int], stream_set))
+    # Casting it to Dict[Union[int, str], Any] beacuse inline if/else
+    # (foo = x if y else z) returns object.
+    existing_stream_map = cast(Dict[Union[int, str], Any], existing_stream_map)
 
     if admin_access_required:
         existing_recipient_ids = [stream.recipient_id for stream in existing_stream_map.values()]
@@ -536,8 +556,12 @@ def list_to_streams(streams_raw: Iterable[StreamDict],
 
     message_retention_days_not_none = False
     for stream_dict in streams_raw:
-        stream_name = stream_dict["name"]
-        stream = existing_stream_map.get(stream_name.lower())
+        stream_identifer = stream_dict["stream"]
+
+        if is_stream_type_name:
+            stream_identifer = str(stream_identifer).lower()
+        stream = existing_stream_map.get(stream_identifer)
+
         if stream is None:
             if stream_dict.get('message_retention_days', None) is not None:
                 message_retention_days_not_none = True
@@ -555,7 +579,7 @@ def list_to_streams(streams_raw: Iterable[StreamDict],
             raise JsonableError(_('User cannot create streams.'))
         elif not autocreate:
             raise JsonableError(_("Stream(s) ({}) do not exist").format(
-                ", ".join(stream_dict["name"] for stream_dict in missing_stream_dicts),
+                ", ".join(str(stream_dict["stream"]) for stream_dict in missing_stream_dicts),
             ))
         elif message_retention_days_not_none:
             if not user_profile.is_realm_owner:
