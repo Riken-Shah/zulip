@@ -85,7 +85,10 @@ exports.update_video_chat_button_display = function () {
 exports.clear_all_everyone_warnings = function () {
     $("#compose-all-everyone").hide();
     $("#compose-all-everyone").empty();
-    $("#compose-send-status").hide();
+    // Let the warning or error message stay even after the message is sent if 'stay' is true.
+    if ($("#compose-send-status").attr("stay") !== "true") {
+        $("#compose-send-status").hide();
+    }
 };
 
 function show_sending_indicator(whats_happening) {
@@ -110,7 +113,10 @@ function show_announce_warnings(stream_id) {
 exports.clear_announce_warnings = function () {
     $("#compose-announce").hide();
     $("#compose-announce").empty();
-    $("#compose-send-status").hide();
+    // Let the warning or error message stay even after the message is sent if 'stay' is true.
+    if ($("#compose-send-status").attr("stay") !== "true") {
+        $("#compose-send-status").hide();
+    }
 };
 
 exports.clear_invites = function () {
@@ -256,10 +262,11 @@ function create_message_object() {
 
 exports.create_message_object = create_message_object;
 
-function compose_error(error_text, bad_input) {
+function compose_error(error_text, bad_input, stay = false) {
     $("#compose-send-status")
         .removeClass(common.status_classes)
         .addClass("alert-error")
+        .attr("stay", stay)
         .stop(true)
         .fadeTo(0, 1);
     $("#compose-error-msg").html(error_text);
@@ -286,7 +293,10 @@ function clear_compose_box() {
     $("#compose-textarea").val("").trigger("focus");
     drafts.delete_draft_after_send();
     compose_ui.autosize_textarea($("#compose-textarea"));
-    $("#compose-send-status").hide(0);
+    // Let the warning or error message stay even after the message is sent if 'stay' is true.
+    if ($("#compose-send-status").attr("stay") !== "true") {
+        $("#compose-send-status").hide(0);
+    }
     $("#compose-send-button").prop("disabled", false);
     $("#sending-indicator").hide();
 }
