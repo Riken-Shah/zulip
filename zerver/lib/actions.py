@@ -224,7 +224,7 @@ from zerver.models import (
     get_old_unclaimed_attachments,
     get_stream,
     get_stream_by_id_in_realm,
-    get_stream_cache_key,
+    get_stream_cache_key_for_stream_name,
     get_system_bot,
     get_user_by_delivery_email,
     get_user_by_id_in_realm_including_cross_realm,
@@ -1214,7 +1214,7 @@ def do_deactivate_stream(
         do_remove_streams_from_default_stream_group(stream.realm, group, [stream])
 
     # Remove the old stream information from remote cache.
-    old_cache_key = get_stream_cache_key(old_name, stream.realm_id)
+    old_cache_key = get_stream_cache_key_for_stream_name(old_name, stream.realm_id)
     cache_delete(old_cache_key)
 
     stream_dict = stream.to_dict()
@@ -4278,8 +4278,8 @@ def do_rename_stream(stream: Stream, new_name: str, user_profile: UserProfile) -
 
     # Update the display recipient and stream, which are easy single
     # items to set.
-    old_cache_key = get_stream_cache_key(old_name, stream.realm_id)
-    new_cache_key = get_stream_cache_key(stream.name, stream.realm_id)
+    old_cache_key = get_stream_cache_key_for_stream_name(old_name, stream.realm_id)
+    new_cache_key = get_stream_cache_key_for_stream_name(stream.name, stream.realm_id)
     if old_cache_key != new_cache_key:
         cache_delete(old_cache_key)
         cache_set(new_cache_key, stream)

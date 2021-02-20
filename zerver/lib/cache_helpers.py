@@ -30,7 +30,7 @@ from zerver.models import (
     Stream,
     UserProfile,
     get_client_cache_key,
-    get_stream_cache_key,
+    get_stream_cache_key_for_stream_name,
     huddle_hash_cache_key,
 )
 
@@ -70,7 +70,9 @@ def user_cache_items(
 
 
 def stream_cache_items(items_for_remote_cache: Dict[str, Tuple[Stream]], stream: Stream) -> None:
-    items_for_remote_cache[get_stream_cache_key(stream.name, stream.realm_id)] = (stream,)
+    items_for_remote_cache[get_stream_cache_key_for_stream_name(stream.name, stream.realm_id)] = (
+        stream,
+    )
 
 
 def client_cache_items(items_for_remote_cache: Dict[str, Tuple[Client]], client: Client) -> None:

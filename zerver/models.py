@@ -56,8 +56,8 @@ from zerver.lib.cache import (
     flush_used_upload_space_cache,
     flush_user_profile,
     get_realm_used_upload_space_cache_key,
-    get_stream_cache_key,
     get_stream_cache_key_for_stream_id,
+    get_stream_cache_key_for_stream_name,
     realm_alert_words_automaton_cache_key,
     realm_alert_words_cache_key,
     realm_user_dict_fields,
@@ -1822,7 +1822,7 @@ def get_client_remote_cache(name: str) -> Client:
     return client
 
 
-@cache_with_key(get_stream_cache_key, timeout=3600 * 24 * 7)
+@cache_with_key(get_stream_cache_key_for_stream_name, timeout=3600 * 24 * 7)
 def get_realm_stream(stream_name: str, realm_id: int) -> Stream:
     return Stream.objects.select_related().get(name__iexact=stream_name.strip(), realm_id=realm_id)
 
@@ -1856,7 +1856,7 @@ def get_stream_by_id_in_realm(stream_id: int, realm: Realm) -> Stream:
     return Stream.objects.select_related().get(id=stream_id, realm=realm)
 
 
-def bulk_get_streams(realm: Realm, stream_names: STREAM_NAMES) -> Dict[str, Any]:
+def bulk_get_streams_by_names(realm: Realm, stream_names: STREAM_NAMES) -> Dict[str, Any]:
     def fetch_streams_by_name(stream_names: List[str]) -> Sequence[Stream]:
         #
         # This should be just
@@ -1876,7 +1876,7 @@ def bulk_get_streams(realm: Realm, stream_names: STREAM_NAMES) -> Dict[str, Any]
         )
 
     def stream_name_to_cache_key(stream_name: str) -> str:
-        return get_stream_cache_key(stream_name, realm.id)
+        return get_stream_cache_key_for_stream_name(stream_name, realm.id)
 
     def stream_to_lower_name(stream: Stream) -> str:
         return stream.name.lower()
