@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from django.conf import settings
 from django.db.models.query import QuerySet
@@ -18,6 +18,7 @@ from zerver.models import (
     Subscription,
     UserProfile,
     active_non_guest_user_ids,
+    bulk_get_streams_by_ids,
     bulk_get_streams_by_names,
     get_realm_stream,
     get_stream,
@@ -42,7 +43,9 @@ class StreamDict(TypedDict, total=False):
     the fields in the Stream model.
     """
 
-    name: str
+    # `stream` attribute is used to identify stream,
+    # it can be either stream name or stream id.
+    stream: Union[int, str]
     description: str
     invite_only: bool
     is_web_public: bool
@@ -140,14 +143,14 @@ def create_stream_if_needed(
 def create_streams_if_needed(
     realm: Realm, stream_dicts: List[StreamDict], acting_user: Optional[UserProfile] = None
 ) -> Tuple[List[Stream], List[Stream]]:
-    """Note that stream_dict["name"] is assumed to already be stripped of
+    """Note that stream_dict["stream"] should be stream name and assumed to already be stripped of
     whitespace"""
     added_streams: List[Stream] = []
     existing_streams: List[Stream] = []
     for stream_dict in stream_dicts:
         stream, created = create_stream_if_needed(
             realm,
-            stream_dict["name"],
+            str(stream_dict["stream"]),
             invite_only=stream_dict.get("invite_only", False),
             stream_post_policy=stream_dict.get(
                 "stream_post_policy", Stream.STREAM_POST_POLICY_EVERYONE
@@ -549,6 +552,10 @@ def list_to_streams(
 ) -> Tuple[List[Stream], List[Stream]]:
     """Converts list of dicts to a list of Streams, validating input in the process
 
+    For each dict in stream_raw, the stream parameter can be either stream
+    name or stream id.
+    Also, Using stream name and stream id in the same call is not allowed.
+
     For each stream name, we validate it to ensure it meets our
     requirements for a proper stream name using check_stream_name.
 
@@ -556,23 +563,48 @@ def list_to_streams(
     during a precheck, or all the streams specified will have been created if applicable.
 
     @param streams_raw The list of stream dictionaries to process;
-      names should already be stripped of whitespace by the caller.
+     `stream` can either be stream name or stream id.
+      if stream names, it should already be stripped of whitespace by the caller.
+      if stream id, it should already be parsed in int and valid.
+
     @param user_profile The user for whom we are retrieving the streams
     @param autocreate Whether we should create streams if they don't already exist
     """
     # Validate all streams, getting extant ones, then get-or-creating the rest.
 
-    stream_set = {stream_dict["name"] for stream_dict in streams_raw}
+    stream_set = {stream_dict["stream"] for stream_dict in streams_raw}
+    is_stream_type_name = isinstance(next(iter(stream_set), None), str)
 
-    for stream_name in stream_set:
-        # Stream names should already have been stripped by the
-        # caller, but it makes sense to verify anyway.
-        assert stream_name == stream_name.strip()
-        check_stream_name(stream_name)
+    if is_stream_type_name:
+        for stream_name in stream_set:
+            # Stream names should already have been stripped by the
+            # caller, but it makes sense to verify anyway.
+            assert isinstance(stream_name, str) and stream_name == stream_name.strip()
+            check_stream_name(stream_name)
+
+    else:
+        for stream_id in stream_set:
+            # Stream id should already be parsed in int and valid by the caller,
+            # but it makes sense to verify anyway.
+            assert isinstance(stream_id, int)
+            try:
+                get_stream_by_id_in_realm(stream_id, user_profile.realm)
+            # Raising error if unknown stream id is passed.
+            except Stream.DoesNotExist:
+                raise JsonableError(_("No stream with id '{}' found.").format(stream_id))
 
     existing_streams: List[Stream] = []
     missing_stream_dicts: List[StreamDict] = []
-    existing_stream_map = bulk_get_streams_by_names(user_profile.realm, stream_set)
+    existing_stream_map: Union[Dict[int, Any], Dict[str, Any]]
+
+    if is_stream_type_name:
+        existing_stream_map = bulk_get_streams_by_names(
+            user_profile.realm, cast(Set[str], stream_set)
+        )
+    else:
+        existing_stream_map = bulk_get_streams_by_ids(
+            user_profile.realm, cast(Set[int], stream_set)
+        )
 
     if admin_access_required:
         existing_recipient_ids = [stream.recipient_id for stream in existing_stream_map.values()]
@@ -586,8 +618,14 @@ def list_to_streams(
 
     message_retention_days_not_none = False
     for stream_dict in streams_raw:
-        stream_name = stream_dict["name"]
-        stream = existing_stream_map.get(stream_name.lower())
+        stream_identifer = stream_dict["stream"]
+
+        if is_stream_type_name:
+            stream_identifer = str(stream_identifer).lower()
+        # Casting existing_stream_map to Dict[Union[int, str], Any] because mypy get confused when using
+        # dict method on Union[Dict[...], Dict[...]].
+        stream = cast(Dict[Union[int, str], Any], existing_stream_map).get(stream_identifer)
+
         if stream is None:
             if stream_dict.get("message_retention_days", None) is not None:
                 message_retention_days_not_none = True
@@ -606,7 +644,7 @@ def list_to_streams(
         elif not autocreate:
             raise JsonableError(
                 _("Stream(s) ({}) do not exist").format(
-                    ", ".join(stream_dict["name"] for stream_dict in missing_stream_dicts),
+                    ", ".join(str(stream_dict["stream"]) for stream_dict in missing_stream_dicts),
                 )
             )
         elif message_retention_days_not_none:

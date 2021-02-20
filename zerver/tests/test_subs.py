@@ -149,7 +149,7 @@ class TestCreateStreams(ZulipTestCase):
             realm,
             [
                 {
-                    "name": stream_name,
+                    "stream": stream_name,
                     "description": stream_description,
                     "invite_only": True,
                     "stream_post_policy": Stream.STREAM_POST_POLICY_ADMINS,
@@ -174,7 +174,7 @@ class TestCreateStreams(ZulipTestCase):
         new_streams, existing_streams = create_streams_if_needed(
             realm,
             [
-                {"name": stream_name, "description": stream_description, "invite_only": True}
+                {"stream": stream_name, "description": stream_description, "invite_only": True}
                 for (stream_name, stream_description) in zip(stream_names, stream_descriptions)
             ],
         )
@@ -195,7 +195,7 @@ class TestCreateStreams(ZulipTestCase):
         self.login_user(user)
         post_data = {
             "subscriptions": orjson.dumps(
-                [{"name": "new_stream", "description": "multi\nline\ndescription"}]
+                [{"stream": "new_stream", "description": "multi\nline\ndescription"}]
             ).decode(),
             "invite_only": orjson.dumps(False).decode(),
         }
@@ -208,23 +208,27 @@ class TestCreateStreams(ZulipTestCase):
         realm = get_realm("zulip")
         stream_dicts: List[StreamDict] = [
             {
-                "name": "publicstream",
+                "stream": "publicstream",
                 "description": "Public stream with public history",
             },
-            {"name": "webpublicstream", "description": "Web public stream", "is_web_public": True},
             {
-                "name": "privatestream",
+                "stream": "webpublicstream",
+                "description": "Web public stream",
+                "is_web_public": True,
+            },
+            {
+                "stream": "privatestream",
                 "description": "Private stream with non-public history",
                 "invite_only": True,
             },
             {
-                "name": "privatewithhistory",
+                "stream": "privatewithhistory",
                 "description": "Private stream with public history",
                 "invite_only": True,
                 "history_public_to_subscribers": True,
             },
             {
-                "name": "publictrywithouthistory",
+                "stream": "publictrywithouthistory",
                 "description": "Public stream without public history (disallowed)",
                 "invite_only": False,
                 "history_public_to_subscribers": False,
@@ -286,7 +290,7 @@ class TestCreateStreams(ZulipTestCase):
         initial_usermessage_count = UserMessage.objects.count()
 
         data = {
-            "subscriptions": '[{"name":"brand new stream","description":""}]',
+            "subscriptions": '[{"stream":"brand new stream","description":""}]',
             "history_public_to_subscribers": "true",
             "invite_only": "false",
             "announce": "true",
@@ -1249,7 +1253,7 @@ class StreamAdminTest(ZulipTestCase):
 
         streams_raw: List[StreamDict] = [
             {
-                "name": "new_stream",
+                "stream": "new_stream",
                 "message_retention_days": 10,
             }
         ]
@@ -1258,7 +1262,7 @@ class StreamAdminTest(ZulipTestCase):
 
         streams_raw = [
             {
-                "name": "new_stream",
+                "stream": "new_stream",
                 "message_retention_days": -1,
             }
         ]
@@ -1267,7 +1271,7 @@ class StreamAdminTest(ZulipTestCase):
 
         streams_raw = [
             {
-                "name": "new_stream",
+                "stream": "new_stream",
                 "message_retention_days": None,
             }
         ]
@@ -1280,9 +1284,9 @@ class StreamAdminTest(ZulipTestCase):
         owner = self.example_user("desdemona")
         realm = owner.realm
         streams_raw = [
-            {"name": "new_stream1", "message_retention_days": 10},
-            {"name": "new_stream2", "message_retention_days": -1},
-            {"name": "new_stream3"},
+            {"stream": "new_stream1", "message_retention_days": 10},
+            {"stream": "new_stream2", "message_retention_days": -1},
+            {"stream": "new_stream3"},
         ]
 
         do_change_plan_type(realm, Realm.LIMITED)
@@ -1369,7 +1373,7 @@ class StreamAdminTest(ZulipTestCase):
         # Even if you could guess the new name, you can't subscribe to it.
         result = self.client_post(
             "/json/users/me/subscriptions",
-            {"subscriptions": orjson.dumps([{"name": deactivated_stream_name}]).decode()},
+            {"subscriptions": orjson.dumps([{"stream": deactivated_stream_name}]).decode()},
         )
         self.assert_json_error(result, f"Unable to access stream ({deactivated_stream_name}).")
 
@@ -2696,16 +2700,28 @@ class SubscriptionRestApiTest(ZulipTestCase):
         user = self.example_user("hamlet")
         self.login_user(user)
 
-        # add
+        # testing add with stream name
         request = {
-            "add": orjson.dumps([{"name": "my_test_stream_1"}]).decode(),
+            "add": orjson.dumps([{"stream": "my_test_stream_1"}]).decode(),
         }
         result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
         self.assert_json_success(result)
         streams = self.get_streams(user)
         self.assertTrue("my_test_stream_1" in streams)
 
-        # now delete the same stream
+        # testing add with stream id
+        new_stream = self.make_stream(
+            stream_name="test_stream", realm=user.realm, is_web_public=True
+        )
+        request = {
+            "add": orjson.dumps([{"stream": new_stream.id}]).decode(),
+        }
+        result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
+        self.assert_json_success(result)
+        streams = self.get_streams(user)
+        self.assertTrue(new_stream.name in streams)
+
+        # now delete the same stream with name
         request = {
             "delete": orjson.dumps(["my_test_stream_1"]).decode(),
         }
@@ -2714,22 +2730,48 @@ class SubscriptionRestApiTest(ZulipTestCase):
         streams = self.get_streams(user)
         self.assertTrue("my_test_stream_1" not in streams)
 
+        # now delete the same stream with id
+        request = {
+            "delete": orjson.dumps([new_stream.id]).decode(),
+        }
+        result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
+        self.assert_json_success(result)
+        streams = self.get_streams(user)
+        self.assertTrue(new_stream.name not in streams)
+
     def test_add_with_color(self) -> None:
         user = self.example_user("hamlet")
         self.login_user(user)
 
-        # add with color proposition
+        # add with color proposition using stream name
         request = {
-            "add": orjson.dumps([{"name": "my_test_stream_2", "color": "#afafaf"}]).decode(),
+            "add": orjson.dumps([{"stream": "my_test_stream_2", "color": "#afafaf"}]).decode(),
         }
         result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
         self.assert_json_success(result)
 
-        # incorrect color format
+        # add with color proposition using stream id
+        new_stream = self.make_stream(
+            stream_name="test_stream2", realm=user.realm, is_web_public=True
+        )
+        request = {
+            "add": orjson.dumps([{"stream": new_stream.id, "color": "#a2d39b"}]).decode(),
+        }
+        result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
+        self.assert_json_success(result)
+
+        # incorrect color format using stream name
         request = {
             "subscriptions": orjson.dumps(
-                [{"name": "my_test_stream_3", "color": "#0g0g0g"}]
+                [{"stream": "my_test_stream_3", "color": "#0g0g0g"}]
             ).decode(),
+        }
+        result = self.api_post(user, "/api/v1/users/me/subscriptions", request)
+        self.assert_json_error(result, 'subscriptions[0]["color"] is not a valid hex color code')
+
+        # incorrect color format using stream id
+        request = {
+            "subscriptions": orjson.dumps([{"stream": new_stream.id, "color": "#0g0g0g"}]).decode(),
         }
         result = self.api_post(user, "/api/v1/users/me/subscriptions", request)
         self.assert_json_error(result, 'subscriptions[0]["color"] is not a valid hex color code')
@@ -2791,15 +2833,15 @@ class SubscriptionRestApiTest(ZulipTestCase):
             self.assert_json_error(result, expected_message)
 
         check_for_error(["foo"], "add[0] is not a dict")
-        check_for_error([{"bogus": "foo"}], "name key is missing from add[0]")
-        check_for_error([{"name": {}}], 'add[0]["name"] is not a string')
+        check_for_error([{"bogus": "foo"}], "stream key is missing from add[0]")
+        check_for_error([{"stream": {}}], 'add[0]["stream"] is not a string or integer')
 
     def test_bad_principals(self) -> None:
         user = self.example_user("hamlet")
         self.login_user(user)
 
         request = {
-            "add": orjson.dumps([{"name": "my_new_stream"}]).decode(),
+            "add": orjson.dumps([{"stream": "my_new_stream"}]).decode(),
             "principals": orjson.dumps([{}]).decode(),
         }
         result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
@@ -2810,10 +2852,10 @@ class SubscriptionRestApiTest(ZulipTestCase):
         self.login_user(user)
 
         request = {
-            "delete": orjson.dumps([{"name": "my_test_stream_1"}]).decode(),
+            "delete": orjson.dumps([{"stream": "my_test_stream_1"}]).decode(),
         }
         result = self.api_patch(user, "/api/v1/users/me/subscriptions", request)
-        self.assert_json_error(result, "delete[0] is not a string")
+        self.assert_json_error(result, "delete[0] is not a string or integer")
 
     def test_add_or_delete_not_specified(self) -> None:
         user = self.example_user("hamlet")
@@ -2993,6 +3035,25 @@ class SubscriptionAPITest(ZulipTestCase):
                 self.test_realm,
             )
         self.assert_length(events, 6)
+
+    def test_subscriptions_add_with_bad_id(self) -> None:
+        """
+        Calling POST /json/users/me/subscriptions should raise error
+        as stream id does not exists.
+        This error occurs because it tries to fetch stream with some
+        stream id which is not present in database.
+        """
+        user = self.example_user("hamlet")
+        self.login_user(user)
+        invalid_stream_id = 992
+        valid_stream = self.get_streams(user)[0]
+        result = self.common_subscribe_to_streams(
+            user,
+            [self.get_stream_id(valid_stream), invalid_stream_id],
+            dict(principals=orjson.dumps([user.id]).decode()),
+            allow_fail=True,
+        )
+        self.assert_json_error(result, f"No stream with id '{invalid_stream_id}' found.")
 
     def test_successful_subscriptions_add_with_announce(self) -> None:
         """
@@ -3559,7 +3620,7 @@ class SubscriptionAPITest(ZulipTestCase):
             {
                 "invite_only": False,
                 "history_public_to_subscribers": None,
-                "name": "new_stream",
+                "stream": "new_stream",
                 "stream_post_policy": Stream.STREAM_POST_POLICY_EVERYONE,
             }
         ]
@@ -4200,7 +4261,7 @@ class SubscriptionAPITest(ZulipTestCase):
         realm_name = "no_othello_allowed"
         realm = do_create_realm(realm_name, "Everyone but Othello is allowed")
         stream_dict = {
-            "name": "publicstream",
+            "stream": "publicstream",
             "description": "Public stream with public history",
             "realm_id": realm.id,
         }

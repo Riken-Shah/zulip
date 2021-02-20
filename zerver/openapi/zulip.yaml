@@ -4669,7 +4669,7 @@ paths:
                 type: array
                 items:
                   type: object
-              example: [{"name": "Verona", "description": "Italian city"}]
+              example: [{"stream": "Verona", "description": "Italian city"}]
           required: true
         - $ref: "#/components/parameters/Principals"
         - name: authorization_errors_fatal

@@ -845,7 +845,7 @@ function ajaxSubscribe(stream, color, stream_row) {
     }
     return channel.post({
         url: "/json/users/me/subscriptions",
-        data: {subscriptions: JSON.stringify([{name: stream, color}])},
+        data: {subscriptions: JSON.stringify([{stream, color}])},
         success(resp, statusText, xhr) {
             if (overlays.streams_open()) {
                 $("#create_stream_name").val("");
@@ -933,7 +933,7 @@ exports.sub_or_unsub = function (sub, stream_row) {
     if (sub.subscribed) {
         ajaxUnsubscribe(sub, stream_row);
     } else {
-        ajaxSubscribe(sub.name, sub.color, stream_row);
+        ajaxSubscribe(sub.stream_id, sub.color, stream_row);
     }
 };
 

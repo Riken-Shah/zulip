@@ -72,7 +72,7 @@ def add_subscriptions(client: Client) -> None:
     result = client.add_subscriptions(
         streams=[
             {
-                "name": "new stream",
+                "stream": "new stream",
                 "description": "New stream for testing",
             },
         ],
@@ -87,7 +87,7 @@ def add_subscriptions(client: Client) -> None:
     user_id = 25
     result = client.add_subscriptions(
         streams=[
-            {"name": "new stream", "description": "New stream for testing"},
+            {"stream": "new stream", "description": "New stream for testing"},
         ],
         principals=[user_id],
     )
@@ -99,7 +99,7 @@ def add_subscriptions(client: Client) -> None:
 def test_add_subscriptions_already_subscribed(client: Client) -> None:
     result = client.add_subscriptions(
         streams=[
-            {"name": "new stream", "description": "New stream for testing"},
+            {"stream": "new stream", "description": "New stream for testing"},
         ],
         principals=["newbie@zulip.com"],
     )
@@ -110,7 +110,7 @@ def test_add_subscriptions_already_subscribed(client: Client) -> None:
 def test_authorization_errors_fatal(client: Client, nonadmin_client: Client) -> None:
     client.add_subscriptions(
         streams=[
-            {"name": "private_stream"},
+            {"stream": "private_stream"},
         ],
     )
 
@@ -123,7 +123,7 @@ def test_authorization_errors_fatal(client: Client, nonadmin_client: Client) -> 
 
     result = nonadmin_client.add_subscriptions(
         streams=[
-            {"name": "private_stream"},
+            {"stream": "private_stream"},
         ],
         authorization_errors_fatal=False,
     )
@@ -132,7 +132,7 @@ def test_authorization_errors_fatal(client: Client, nonadmin_client: Client) -> 
 
     result = nonadmin_client.add_subscriptions(
         streams=[
-            {"name": "private_stream"},
+            {"stream": "private_stream"},
         ],
         authorization_errors_fatal=True,
     )
@@ -411,7 +411,7 @@ def delete_stream(client: Client, stream_id: int) -> None:
     result = client.add_subscriptions(
         streams=[
             {
-                "name": "stream to be deleted",
+                "stream": "stream to be deleted",
                 "description": "New stream for testing",
             },
         ],

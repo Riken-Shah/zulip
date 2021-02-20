@@ -261,7 +261,7 @@ add_example("add_subscriptions", "/users/me/subscriptions:post", 200, async (cli
     // {code_example|start}
     // Subscribe to the streams "Verona" and "Denmark"
     const meParams = {
-        subscriptions: JSON.stringify([{name: "Verona"}, {name: "Denmark"}]),
+        subscriptions: JSON.stringify([{stream: "Verona"}, {stream: "Denmark"}]),
     };
     console.log(await client.users.me.subscriptions.add(meParams));
 
@@ -269,7 +269,7 @@ add_example("add_subscriptions", "/users/me/subscriptions:post", 200, async (cli
     // the `principals` parameter, like so:
     const user_id = 7;
     const anotherUserParams = {
-        subscriptions: JSON.stringify([{name: "Verona"}, {name: "Denmark"}]),
+        subscriptions: JSON.stringify([{stream: "Verona"}, {stream: "Denmark"}]),
         principals: JSON.stringify([user_id]),
     };
     console.log(await client.users.me.subscriptions.add(anotherUserParams));

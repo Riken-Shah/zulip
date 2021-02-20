@@ -142,16 +142,16 @@ class NarrowBuilderTest(ZulipTestCase):
         # Add new streams
         stream_dicts: List[StreamDict] = [
             {
-                "name": "publicstream",
+                "stream": "publicstream",
                 "description": "Public stream with public history",
             },
             {
-                "name": "privatestream",
+                "stream": "privatestream",
                 "description": "Private stream with non-public history",
                 "invite_only": True,
             },
             {
-                "name": "privatewithhistory",
+                "stream": "privatewithhistory",
                 "description": "Private stream with public history",
                 "invite_only": True,
                 "history_public_to_subscribers": True,
@@ -178,16 +178,16 @@ class NarrowBuilderTest(ZulipTestCase):
         # Add new streams
         stream_dicts: List[StreamDict] = [
             {
-                "name": "publicstream",
+                "stream": "publicstream",
                 "description": "Public stream with public history",
             },
             {
-                "name": "privatestream",
+                "stream": "privatestream",
                 "description": "Private stream with non-public history",
                 "invite_only": True,
             },
             {
-                "name": "privatewithhistory",
+                "stream": "privatewithhistory",
                 "description": "Private stream with public history",
                 "invite_only": True,
                 "history_public_to_subscribers": True,

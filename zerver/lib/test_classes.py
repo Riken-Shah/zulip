@@ -969,7 +969,7 @@ Output:
     def common_subscribe_to_streams(
         self,
         user: UserProfile,
-        streams: Iterable[str],
+        streams: Iterable[Union[str, int]],
         extra_post_data: Dict[str, Any] = {},
         invite_only: bool = False,
         is_web_public: bool = False,
@@ -977,7 +977,7 @@ Output:
         **kwargs: Any,
     ) -> HttpResponse:
         post_data = {
-            "subscriptions": orjson.dumps([{"name": stream} for stream in streams]).decode(),
+            "subscriptions": orjson.dumps([{"stream": stream} for stream in streams]).decode(),
             "is_web_public": orjson.dumps(is_web_public).decode(),
             "invite_only": orjson.dumps(invite_only).decode(),
         }
