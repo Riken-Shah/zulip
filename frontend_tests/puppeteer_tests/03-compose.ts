@@ -63,7 +63,7 @@ async function test_reply_by_click_prepopulates_stream_topic_names(page: Page): 
         await page.$x(get_message_xpath("Compose stream reply test")),
     );
     // we chose only the last element make sure we don't click on any duplicates.
-    await stream_message.click();
+    await page.evaluate(el => el.click(), stream_message);
     await common.check_form_contents(page, "#send_message_form", {
         stream_message_recipient_stream: "Verona",
         stream_message_recipient_topic: "Reply test",

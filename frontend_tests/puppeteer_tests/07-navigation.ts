@@ -19,7 +19,7 @@ async function navigate_to(page: Page, click_target: string, tab: string): Promi
 async function open_menu(page: Page): Promise<void> {
     const menu_selector = "#settings-dropdown";
     await page.waitForSelector(menu_selector, {visible: true});
-    await page.click(menu_selector);
+    await page.$eval(menu_selector, (el) => el.click());
 }
 
 async function navigate_to_settings(page: Page): Promise<void> {
@@ -29,7 +29,7 @@ async function navigate_to_settings(page: Page): Promise<void> {
 
     const settings_selector = "a[href^='#settings']";
     await page.waitForSelector(settings_selector, {visible: true});
-    await page.click(settings_selector);
+    await page.$eval(settings_selector, (el) => el.click());
 
     await page.waitForSelector("#settings_page", {visible: true});
 
@@ -47,8 +47,7 @@ async function navigate_to_subscriptions(page: Page): Promise<void> {
 
     await page.waitForSelector("#subscription_overlay", {visible: true});
     await page.waitForSelector("#subscriptions_table", {visible: true});
-
-    await page.click("#subscription_overlay .exit");
+    await page.$eval("#subscription_overlay .exit", el => el.click());
 }
 
 async function test_reload_hash(page: Page): Promise<void> {
