@@ -387,9 +387,15 @@ async function admin_test(page: Page): Promise<void> {
     await test_change_organization_default_language(page);
 
     await test_organization_permissions(page);
-    await test_custom_realm_emoji(page);
+    // The below condition avoids running the test which requires file uploading because
+    // Firefox does not support it yet.
+    // This is the link to the above issue https://github.com/puppeteer/puppeteer/issues/6688
+    // TODO: When the above issue is resolved please remove the below condition.
+    if (!common.is_firefox) {
+        await test_custom_realm_emoji(page);
+        await test_organization_profile(page);
+    }
     await test_default_streams(page);
-    await test_organization_profile(page);
     await test_authentication_methods(page);
 }
 
