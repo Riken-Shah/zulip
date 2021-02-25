@@ -61,6 +61,7 @@ async function test_reload_hash(page: Page): Promise<void> {
         const reload = window.require("./static/js/reload");
         reload.initiate({immediate: true});
     });
+    await page.waitForNavigation();
     await page.waitForSelector("#zfilt", {visible: true});
 
     const page_load_time = await page.evaluate(() => page_params.page_load_time);
