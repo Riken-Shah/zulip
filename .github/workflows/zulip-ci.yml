@@ -21,15 +21,6 @@ jobs:
             is_bionic: true
             include_frontend_tests: true
 
-          # This docker image was created by a generated Dockerfile at:
-          #   tools/ci/images/focal/Dockerfile
-          # Focal ships with Python 3.8.2.
-          - docker_image: mepriyank/actions:focal
-            name: Ubuntu 20.04 Focal (Python 3.8, backend)
-            os: focal
-            is_focal: true
-            include_frontend_tests: false
-
     runs-on: ubuntu-latest
     name: ${{ matrix.name }}
     container: ${{ matrix.docker_image }}
@@ -104,16 +95,17 @@ jobs:
           # most builds don't get to write to the cache.
           # mispipe "scripts/lib/clean-unused-caches --verbose --threshold 0 2>&1" ts
 
-      - name: Run backend tests
-        run: |
-          . /srv/zulip-py3-venv/bin/activate && \
-          mispipe "./tools/ci/backend 2>&1" ts
-
-      - name: Run frontend tests
+      - name: Run puppeteer tests for 50 times to avoid maximum timeout error
         if: ${{ matrix.include_frontend_tests }}
         run: |
           . /srv/zulip-py3-venv/bin/activate
-          mispipe "./tools/ci/frontend 2>&1" ts
+          mispipe "./tools/test-js-with-puppeteer 2>&1" ts
+
+      - name: Run puppeteer tests for 50 times to avoid maximum timeout error
+        if: ${{ matrix.include_frontend_tests }}
+        run: |
+          . /srv/zulip-py3-venv/bin/activate
+          mispipe "./tools/test-js-with-puppeteer 2>&1" ts
 
       - name: Test locked requirements
         if: ${{ matrix.is_bionic }}

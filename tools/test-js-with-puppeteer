@@ -127,7 +127,9 @@ or report and ask for help in chat.zulip.org""",
 
 external_host = "zulipdev.com:9981"
 assert_provisioning_status_ok(options.force)
-prepare_puppeteer_run(is_firefox=options.firefox)
-run_tests(options.tests, external_host)
+prepare_puppeteer_run(is_firefox=True)
+for i in range(0, 50):
+    print("testrun:", i)
+    run_tests(options.tests, external_host)
 print(f"{OKGREEN}All tests passed!{ENDC}")
 sys.exit(0)

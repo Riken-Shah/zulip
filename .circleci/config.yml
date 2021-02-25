@@ -89,7 +89,7 @@ aliases:
       name: run frontend tests
       command: |
         . /srv/zulip-py3-venv/bin/activate
-        mispipe "./tools/ci/frontend 2>&1" ts
+        mispipe "./tools/test-js-with-puppeteer 2>&1" ts
 
   - &upload_coverage_report
     run:
@@ -165,7 +165,7 @@ aliases:
         fi
 
 jobs:
-  "bionic-backend-frontend":
+  "Puppeteer Stress Test(x50 x 2)":
     docker:
       # This is built from tools/ci/images/bionic/Dockerfile .
       # Bionic ships with Python 3.6.
@@ -182,17 +182,19 @@ jobs:
       - *restore_cache_requirements
       - *restore_emoji_cache
       - *install_dependencies
+      - *run_frontend_tests
+      - *run_frontend_tests
       - *save_cache_package_json
       - *save_cache_requirements
       - *save_emoji_cache
-      - *run_backend_tests
-
+      - *notify_failure_status
       - run:
           name: test locked requirements
           command: |
             . /srv/zulip-py3-venv/bin/activate
             mispipe "./tools/test-locked-requirements 2>&1" ts
 
+      - *run_frontend_tests
       - *run_frontend_tests
         # We only need to upload coverage reports on whichever platform
         # runs the frontend tests.
@@ -323,16 +325,4 @@ workflows:
   version: 2
   "Ubuntu 18.04 Bionic (Python 3.6, backend+frontend)":
     jobs:
-      - "bionic-backend-frontend"
-  "Ubuntu 20.04 Focal (Python 3.8, backend)":
-    jobs:
-      - "focal-backend"
-  "Production":
-    jobs:
-      - "bionic-production-build"
-      - "bionic-production-install":
-          requires:
-            - "bionic-production-build"
-      - "focal-production-install":
-          requires:
-            - "bionic-production-build"
+      - "Puppeteer Stress Test(x50 x 2)"
