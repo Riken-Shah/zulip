@@ -14,8 +14,12 @@ async function trigger_edit_last_message(page: Page): Promise<void> {
 async function edit_stream_message(page: Page, topic: string, content: string): Promise<void> {
     await trigger_edit_last_message(page);
 
-    await page.evaluate(() => $(".message_edit_topic").val(""));
-    await page.evaluate(() => $(".message_edit_content").val(""));
+    await page.$eval(".message_edit_topic", (el) => {
+        (el as HTMLInputElement).value = "";
+    });
+    await page.$eval(".message_edit_content", (el) => {
+        (el as HTMLTextAreaElement).value = "";
+    });
 
     await page.type(".message_edit_topic", topic);
     await page.type(".message_edit_content", content);
@@ -66,7 +70,9 @@ async function test_edit_private_message(page: Page): Promise<void> {
     });
     await trigger_edit_last_message(page);
 
-    await page.evaluate(() => $(".message_edit_content").val(""));
+    await page.$eval(".message_edit_content", (el) => {
+        (el as HTMLTextAreaElement).value = "";
+    });
     await page.type(".message_edit_content", "test edited pm");
     await page.click(".message_edit_save");
     await common.wait_for_fully_processed_message(page, "test edited pm");
