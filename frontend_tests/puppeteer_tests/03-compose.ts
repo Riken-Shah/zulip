@@ -59,8 +59,10 @@ async function test_keyboard_shortcuts(page: Page): Promise<void> {
 }
 
 async function test_reply_by_click_prepopulates_stream_topic_names(page: Page): Promise<void> {
+    const stream_message_xpath = get_message_xpath("Compose stream reply test");
+    await page.waitForXPath(stream_message_xpath, {visible: true});
     const stream_message = get_last_element(
-        await page.$x(get_message_xpath("Compose stream reply test")),
+        await page.$x(stream_message_xpath),
     );
     // we chose only the last element make sure we don't click on any duplicates.
     await stream_message.click();
