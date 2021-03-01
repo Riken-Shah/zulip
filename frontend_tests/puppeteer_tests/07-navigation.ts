@@ -34,6 +34,11 @@ async function navigate_to_settings(page: Page): Promise<void> {
     await page.waitForSelector("#settings_page", {visible: true});
 
     await page.click("#settings_page .content-wrapper .exit");
+    await page.waitForFunction(
+        () =>
+            document.querySelector("#settings_overlay_container")!.getAttribute("aria-hidden") ===
+            "true",
+    );
 }
 
 async function navigate_to_subscriptions(page: Page): Promise<void> {
@@ -49,6 +54,10 @@ async function navigate_to_subscriptions(page: Page): Promise<void> {
     await page.waitForSelector("#subscriptions_table", {visible: true});
 
     await page.click("#subscription_overlay .exit");
+    await page.waitForFunction(
+        () =>
+            document.querySelector("#subscription_overlay")!.getAttribute("aria-hidden") === "true",
+    );
 }
 
 async function test_reload_hash(page: Page): Promise<void> {
