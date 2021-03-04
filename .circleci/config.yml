@@ -89,7 +89,7 @@ aliases:
       name: run frontend tests
       command: |
         . /srv/zulip-py3-venv/bin/activate
-        mispipe "./tools/test-js-with-puppeteer 2>&1" ts
+        mispipe "./tools/test-js-with-puppeteer 16 2>&1" ts
 
   - &upload_coverage_report
     run:

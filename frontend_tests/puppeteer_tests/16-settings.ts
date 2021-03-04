@@ -351,13 +351,21 @@ async function test_notifications_section(page: Page): Promise<void> {
 async function settings_tests(page: Page): Promise<void> {
     await common.log_in(page);
     await open_settings(page);
+    console.log("Calling test_change_full_name");
     await test_change_full_name(page);
+    console.log("Calling test_get_api_key");
     await test_get_api_key(page);
+    console.log("Calling test_change_password");
     await test_change_password(page);
+    console.log("Calling test_alert_words_section");
     await test_alert_words_section(page);
+    console.log("Calling test_your_bots_section");
     await test_your_bots_section(page);
+    console.log("Calling test_default_language_setting");
     await test_default_language_setting(page);
+    console.log("Calling test_notifications_section");
     await test_notifications_section(page);
+    console.log("Done Finally!!");
 }
 
 common.run_test(settings_tests);

@@ -99,13 +99,13 @@ jobs:
         if: ${{ matrix.include_frontend_tests }}
         run: |
           . /srv/zulip-py3-venv/bin/activate
-          mispipe "./tools/test-js-with-puppeteer 2>&1" ts
+          mispipe "./tools/test-js-with-puppeteer 16 2>&1" ts
 
       - name: Run puppeteer tests for 50 times to avoid maximum timeout error
         if: ${{ matrix.include_frontend_tests }}
         run: |
           . /srv/zulip-py3-venv/bin/activate
-          mispipe "./tools/test-js-with-puppeteer 2>&1" ts
+          mispipe "./tools/test-js-with-puppeteer 16 2>&1" ts
 
       - name: Test locked requirements
         if: ${{ matrix.is_bionic }}
