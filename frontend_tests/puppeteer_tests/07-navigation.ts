@@ -20,6 +20,7 @@ async function open_menu(page: Page): Promise<void> {
     const menu_selector = "#settings-dropdown";
     await page.waitForSelector(menu_selector, {visible: true});
     await page.click(menu_selector);
+    await common.screenshot(page, "check");
 }
 
 async function navigate_to_settings(page: Page): Promise<void> {
@@ -60,6 +61,7 @@ async function navigate_to_subscriptions(page: Page): Promise<void> {
         () =>
             document.querySelector("#subscription_overlay")!.getAttribute("aria-hidden") === "true",
     );
+    await common.screenshot(page, "subscriptions");
 }
 
 async function test_reload_hash(page: Page): Promise<void> {
