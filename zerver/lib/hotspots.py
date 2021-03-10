@@ -86,6 +86,16 @@ def get_next_hotspots(user: UserProfile) -> List[Dict[str, object]]:
     seen_hotspots = frozenset(
         UserHotspot.objects.filter(user=user).values_list("hotspot", flat=True)
     )
+
+    intro_draft_hotspot = [
+        {
+            "name": "intro_draft",
+            "title": str(ALL_HOTSPOTS["intro_draft"]["title"]),
+            "description": str(ALL_HOTSPOTS["intro_draft"]["description"]),
+            "delay": 0.5,
+        }
+    ]
+
     for hotspot in INTRO_HOTSPOTS.keys():
         if hotspot not in seen_hotspots:
             return [
@@ -95,7 +105,7 @@ def get_next_hotspots(user: UserProfile) -> List[Dict[str, object]]:
                     "description": str(INTRO_HOTSPOTS[hotspot]["description"]),
                     "delay": 0.5,
                 }
-            ]
+            ] + ([] if "intro_draft" in seen_hotspots else intro_draft_hotspot)
 
     user.tutorial_status = UserProfile.TUTORIAL_FINISHED
     user.save(update_fields=["tutorial_status"])

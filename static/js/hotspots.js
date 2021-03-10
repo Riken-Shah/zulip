@@ -72,6 +72,8 @@ const HOTSPOT_LOCATIONS = new Map([
 
 // popover illustration url(s)
 const WHALE = "/static/images/hotspots/whale.svg";
+// It tracks whether the intro_draft hotspot is seen or not.
+export let is_intro_draft_hotspot_seen = false;
 
 export function post_hotspot_as_read(hotspot_name) {
     channel.post({
@@ -287,10 +289,27 @@ export function load_new(new_hotspots) {
     close_read_hotspots(new_hotspots);
     for (const hotspot of new_hotspots) {
         hotspot.location = HOTSPOT_LOCATIONS.get(hotspot.name);
-        insert_hotspot_into_DOM(hotspot);
+        // Avoid showing intro_draft hotspot because we are manually activating it.
+        if (hotspot.name !== "intro_draft") {
+            insert_hotspot_into_DOM(hotspot);
+        }
     }
 }
 
+export function load_intro_draft_hotspot() {
+    const intro_draft_hotspot = page_params.hotspots.find(
+        (hotspot) => hotspot.name === "intro_draft",
+    );
+    insert_hotspot_into_DOM(intro_draft_hotspot);
+}
+
+export function mark_intro_draft_hostpost_seen() {
+    is_intro_draft_hotspot_seen = true;
+}
+
 export function initialize() {
+    // Marking intro_draft hotspot as seen, if it is not sent from the server.
+    is_intro_draft_hotspot_seen =
+        page_params.hotspots.findIndex((hotspot) => hotspot.name === "intro_draft") === -1;
     load_new(page_params.hotspots);
 }

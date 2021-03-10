@@ -925,6 +925,10 @@ export function initialize() {
         // Comment below to disable marking hotspots as read in production
         hotspots.post_hotspot_as_read(hotspot_name);
 
+        if (hotspot_name === "intro_draft") {
+            hotspots.mark_intro_draft_hostpost_seen();
+        }
+
         overlays.close_overlay(overlay_name);
         $(`#hotspot_${CSS.escape(hotspot_name)}_icon`).remove();
     });

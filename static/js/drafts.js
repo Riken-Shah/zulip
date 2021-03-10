@@ -9,6 +9,7 @@ import * as compose_fade from "./compose_fade";
 import * as compose_state from "./compose_state";
 import * as compose_ui from "./compose_ui";
 import * as hashchange from "./hashchange";
+import * as hotspots from "./hotspots";
 import {localstorage} from "./localstorage";
 import * as markdown from "./markdown";
 import * as narrow from "./narrow";
@@ -61,6 +62,11 @@ export const draft_model = (function () {
         draft.updatedAt = getTimestamp();
         drafts[id] = draft;
         save(drafts);
+
+        // Show draft introduction when the first draft is created.
+        if (!hotspots.is_intro_draft_hotspot_seen) {
+            hotspots.load_intro_draft_hotspot();
+        }
 
         return id;
     };

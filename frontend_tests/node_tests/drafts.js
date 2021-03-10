@@ -33,6 +33,9 @@ mock_module("stream_data", {
         return "#FFFFFF";
     },
 });
+mock_module("hotspots", {
+    is_intro_draft_hotspot_seen: true,
+});
 set_global("page_params", {
     twenty_four_hour_time: false,
 });
