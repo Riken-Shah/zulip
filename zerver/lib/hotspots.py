@@ -41,6 +41,15 @@ INTRO_HOTSPOTS: Dict[str, Dict[str, Promise]] = {
             "(2-3 words is best), and give it a go!"
         ),
     },
+    "intro_draft": {
+        "title": ugettext_lazy("Drafts"),
+        "description": ugettext_lazy(
+            "Click here to view all your drafts. When you are typing "
+            "something and you (intentionally or mistakenly) close the "
+            "compose box, Don't worry! Your message will be saved, and "
+            "you can continue it from where you left off."
+        ),
+    },
 }
 
 # We would most likely implement new hotspots in the future that aren't
